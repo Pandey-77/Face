@@ -1,0 +1,362 @@
+ .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .video-container {
+            position: relative;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            margin-bottom: 20px;
+        }
+
+        .video-wrapper {
+            position: relative;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+        }
+
+        #videoElement, #processedCanvas {
+            width: 640px;
+            height: 480px;
+            max-width: 100%;
+            display: block;
+        }
+
+        #processedCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            background: #000;
+        }
+
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            justify-content: center;
+            align-items: center;
+            margin-top: 20px;
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 10px 15px;
+            border-radius: 25px;
+            backdrop-filter: blur(5px);
+        }
+
+        button {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            background: #666;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .start-btn {
+            background: linear-gradient(45deg, #00b894, #00a085);
+        }
+
+        .stop-btn {
+            background: linear-gradient(45deg, #d63031, #b71c1c);
+        }
+
+        input[type="range"] {
+            width: 120px;
+            height: 6px;
+            border-radius: 3px;
+            background: rgba(255, 255, 255, 0.3);
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #ff6b6b;
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #ff6b6b;
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        }
+
+        .status {
+            text-align: center;
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(5px);
+        }
+
+        .status.active {
+            background: rgba(0, 184, 148, 0.2);
+            border: 1px solid rgba(0, 184, 148, 0.5);
+        }
+
+        .status.error {
+            background: rgba(214, 48, 49, 0.2);
+            border: 1px solid rgba(214, 48, 49, 0.5);
+        }
+
+        .face-counter {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #00b894;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            #videoElement, #processedCanvas {
+                width: 100%;
+                height: auto;
+            }
+            
+            .controls {
+                flex-direction: column;
+            }
+            
+            .control-group {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🎭 Real-time Face Blur</h1>
+        <p>Privacy-focused webcam with automatic face detection and blurring</p>
+    </div>
+
+    <div class="video-container">
+        <div class="video-wrapper">
+            <video id="videoElement" autoplay muted playsinline></video>
+            <canvas id="processedCanvas"></canvas>
+        </div>
+        
+        <div class="controls">
+            <button id="startBtn" class="start-btn">📹 Start Camera</button>
+            <button id="stopBtn" class="stop-btn" disabled>⏹️ Stop Camera</button>
+            
+            <div class="control-group">
+                <label for="blurSlider">Blur Strength:</label>
+                <input type="range" id="blurSlider" min="1" max="51" step="2" value="15">
+                <span id="blurValue">15</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="status" class="status">
+        Click "Start Camera" to begin face detection and blurring
+    </div>
+
+    <script>
+        class FaceBlurApp {
+            constructor() {
+                this.video = document.getElementById('videoElement');
+                this.canvas = document.getElementById('processedCanvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.startBtn = document.getElementById('startBtn');
+                this.stopBtn = document.getElementById('stopBtn');
+                this.blurSlider = document.getElementById('blurSlider');
+                this.blurValue = document.getElementById('blurValue');
+                this.status = document.getElementById('status');
+                
+                this.stream = null;
+                this.isProcessing = false;
+                this.processingInterval = null;
+                
+                this.initEventListeners();
+            }
+            
+            initEventListeners() {
+                this.startBtn.addEventListener('click', () => this.startCamera());
+                this.stopBtn.addEventListener('click', () => this.stopCamera());
+                this.blurSlider.addEventListener('input', (e) => this.updateBlurStrength(e.target.value));
+            }
+            
+            async startCamera() {
+                try {
+                    this.updateStatus('Requesting camera access...', 'active');
+                    
+                    this.stream = await navigator.mediaDevices.getUserMedia({
+                        video: { 
+                            width: { ideal: 640 }, 
+                            height: { ideal: 480 },
+                            facingMode: 'user'
+                        }
+                    });
+                    
+                    this.video.srcObject = this.stream;
+                    
+                    this.video.onloadedmetadata = () => {
+                        this.canvas.width = this.video.videoWidth;
+                        this.canvas.height = this.video.videoHeight;
+                        this.startProcessing();
+                    };
+                    
+                    this.startBtn.disabled = true;
+                    this.stopBtn.disabled = false;
+                    
+                } catch (error) {
+                    console.error('Error accessing camera:', error);
+                    this.updateStatus(`Camera access denied: ${error.message}`, 'error');
+                }
+            }
+            
+            stopCamera() {
+                if (this.stream) {
+                    this.stream.getTracks().forEach(track => track.stop());
+                    this.stream = null;
+                }
+                
+                if (this.processingInterval) {
+                    clearInterval(this.processingInterval);
+                    this.processingInterval = null;
+                }
+                
+                this.isProcessing = false;
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                this.startBtn.disabled = false;
+                this.stopBtn.disabled = true;
+                
+                this.updateStatus('Camera stopped', '');
+            }
+            
+            startProcessing() {
+                this.isProcessing = true;
+                this.updateStatus('Face detection active - Processing frames...', 'active');
+                
+                // Process frames at ~15 FPS to balance performance and responsiveness
+                this.processingInterval = setInterval(() => {
+                    this.processFrame();
+                }, 66);
+            }
+            
+            async processFrame() {
+                if (!this.isProcessing || this.video.readyState !== 4) return;
+                
+                try {
+                    // Draw current video frame to a temporary canvas
+                    const tempCanvas = document.createElement('canvas');
+                    const tempCtx = tempCanvas.getContext('2d');
+                    tempCanvas.width = this.video.videoWidth;
+                    tempCanvas.height = this.video.videoHeight;
+                    
+                    tempCtx.drawImage(this.video, 0, 0);
+                    
+                    // Convert to base64
+                    const imageData = tempCanvas.toDataURL('image/jpeg', 0.8);
+                    
+                    // Send to server for processing
+                    const response = await fetch('/process_frame', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ image: imageData })
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        // Display processed frame
+                        const img = new Image();
+                        img.onload = () => {
+                            this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                            this.ctx.drawImage(img, 0, 0, this.canvas.width, this.canvas.height);
+                        };
+                        img.src = result.image;
+                        
+                        // Update status with face count
+                        const faceText = result.faces_detected === 1 ? 'face' : 'faces';
+                        this.updateStatus(
+                            `<span class="face-counter">${result.faces_detected} ${faceText} detected and blurred</span>`, 
+                            'active'
+                        );
+                    }
+                    
+                } catch (error) {
+                    console.error('Error processing frame:', error);
+                }
+            }
+            
+            async updateBlurStrength(value) {
+                this.blurValue.textContent = value;
+                
+                try {
+                    await fetch('/set_blur', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ blur: parseInt(value) })
+                    });
+                } catch (error) {
+                    console.error('Error updating blur strength:', error);
+                }
+            }
+            
+            updateStatus(message, className) {
+                this.status.innerHTML = message;
+                this.status.className = `status ${className}`;
+            }
+        }
+        
+        // Initialize the app when the page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new FaceBlurApp();
+        });
+    </script>
+</body>
+</html>
